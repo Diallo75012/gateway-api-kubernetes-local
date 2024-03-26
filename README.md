@@ -17,3 +17,6 @@ customresourcedefinition.apiextensions.k8s.io/referencegrants.gateway.networking
 ```
 
 # after do the same for the next ones called ....install-in-second.yaml ...etc..
+
+
+#see notes.txt for more info...
