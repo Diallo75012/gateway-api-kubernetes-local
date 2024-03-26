@@ -1,0 +1,8 @@
+.env
+*venv*
+venv/*
+kubernetes*
+kubernetes-gateway-api/
+kubernetes-gateway-api/*
+get_helm.sh
+

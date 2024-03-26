@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blue-html-configmap
+  namespace: default
+data:
+  index.html: |
+    <html>
+    <h1 style="color:blue;">Creditizens</h1>
+    </br>
+    <h1 style="color:blue;">Kubernetes Gateway API BLUE</h1>
+    </html>
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx2
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: nginx2
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx2
+  template:
+    metadata:
+      labels:
+        app: nginx2
+    spec:
+      containers:
+      - name: nginx2
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: blue-creditizens
+          mountPath: /usr/share/nginx/html/
+      volumes:
+      - name: blue-creditizens
+        configMap:
+          name: blue-html-configmap

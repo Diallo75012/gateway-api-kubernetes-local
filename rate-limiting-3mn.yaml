@@ -1,0 +1,15 @@
+#### Limiting route application on routes or services
+## limiting route on service
+# kubectl annotate service nginx1 konghq.com/plugins=rate-limit-3-min
+## limiting rate on route
+# kubectl annotate httproute nginx-route konghq.com/plugins=rate-limit-3-min
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: rate-limit-3-min
+  annotations:
+    kubernetes.io/ingress.class: kong
+config:
+  minute: 3
+  policy: local
+plugin: rate-limiting

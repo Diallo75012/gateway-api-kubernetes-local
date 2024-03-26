@@ -1,0 +1,145 @@
+- We will clone a django repo and have it deployed on kubernetes so that we have an application to show
+
+# services in kubernetes can be accessed by dns name
+<servicename.namespace.svc.cluster.local>
+
+# get the gateway api from Kong as it is marked as GA so it is going to be lasting, rename it if you want, in this repo it is called kong-gateway0api.yaml
+```bash
+wget https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+```
+
+# after create the yaml file and apply it creating the class Gateway 
+
+
+# install  helm
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+sudo chmod 700 get_helm.sh
+./get_helm.sh
+
+# add kon repo
+helm repo add kong https://charts.konghq.com
+helm repo update
+
+# install kong ingress controller
+helm install kong kong/ingress -n kong --create-namespace
+eg:
+helm install kong kong/ingress -n kong --create-namespace 
+Outputs:
+NAME: kong
+LAST DEPLOYED: Mon Mar 25 16:18:32 2024
+NAMESPACE: kong
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+
+
+# check if you can get the loadbalancer ip address
+export PROXY_IP=$(kubectl get svc --namespace kong kong-gateway-proxy -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+echo $PROXY_IP
+
+# get all resources present in kong namespace
+kubectl api-resources --verbs=list --namespaced -o name \
+  | xargs -n 1 kubectl get --show-kind --ignore-not-found -n kong 
+  
+# kubernetes service URL:
+service-name. namespace. svc. cluster. local:service-port
+
+# create a gatewayclass and a gateway
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: kong
+  annotations:
+    konghq.com/gatewayclass-unmanaged: 'true'
+
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kong
+spec:
+  gatewayClassName: kong
+  listeners:
+  - name: proxy
+    port: 80
+    protocol: HTTP
+    
+ # for rate limiting we need to annotate route or service after having created the kongplugin
+ kubectl annotate service nginx1 konghq.com/plugins=rate-limit-3-min
+ eg: for i in `seq 6`; do curl -sv http://10.96.38.20/nginx1 2>&1 | grep "< HTTP"; done
+Outputs:
+HTTP/1.1 200 OK
+HTTP/1.1 200 OK
+HTTP/1.1 200 OK
+HTTP/1.1 429 Too Many Requests
+HTTP/1.1 429 Too Many Requests
+HTTP/1.1 429 Too Many Requests
+
+# for authentication on a service create a secret in kubernetes, then create another kongplugin key/value with the key_name or key_names, then you annotate the service, don't forget to put in your annotation the ones you had before as it will overwrite the annotation or maybe just open the yaml file and add the annotation (with the name of the kongplugin)
+kubectl annotate service nginx2 konghq.com/plugins=rate-limit-3-min,nginx2-auth --overwrite
+
+# secret, authentication, consumer
+cat secret-auth-nginx2-service-gateway-api.yaml 
+apiVersion: v1
+kind: Secret
+metadata:
+  name: creditizens-nginx2-auth
+  labels:
+    konghq.com/credential: key-auth
+stringData:
+  key: metaverse
+
+cat authentication-service-gateway-api.yaml 
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: nginx2-auth
+plugin: key-auth
+config:
+  key_names:
+  - apikey
+
+cat consumer-auth-nginx2-service-secret-gateway-api.yaml 
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+ name: creditizens-user-auth-consumer
+ annotations:
+   kubernetes.io/ingress.class: kong
+username: creditizens
+credentials:
+ - creditizens-nginx2-auth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
